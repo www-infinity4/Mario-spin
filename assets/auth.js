@@ -134,8 +134,13 @@ window.AUTH = (() => {
 
   function setBtcAddress(username, btcAddress) {
     if (typeof btcAddress !== "string") return false;
-    // Basic Bitcoin address format check (P2PKH, P2SH, Bech32)
-    if (btcAddress && !/^(1|3|bc1)[a-zA-Z0-9]{25,62}$/.test(btcAddress)) return false;
+    if (btcAddress) {
+      // P2PKH (1...) or P2SH (3...) — Base58Check: no 0, O, I, l; 25–34 chars after prefix
+      const p2pkhP2sh = /^[13][a-km-zA-HJ-NP-Z1-9]{24,33}$/.test(btcAddress);
+      // Bech32 native SegWit (bc1q...) or Bech32m Taproot (bc1p...) — 42 or 62 chars total
+      const bech32    = /^bc1[ac-hj-np-z02-9]{6,87}$/.test(btcAddress);
+      if (!p2pkhP2sh && !bech32) return false;
+    }
     const users = getUsers();
     if (!users[username]) return false;
     users[username].btcAddress = btcAddress;

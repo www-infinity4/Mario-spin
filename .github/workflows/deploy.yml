@@ -24,11 +24,14 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Inject GHP token into cfg.js
-        # The GHP secret must be set in the repository Settings → Secrets → Actions
-        # with the name GHP. The token needs: Actions → Write scope (to trigger
-        # workflow_dispatch) and Contents → Write scope (used by save-spin.yml).
-        # NOTE: the injected token will be visible in page source, so keep its
-        # permissions limited to the two scopes above.
+        # SECURITY NOTE: This embeds the PAT in client-side JavaScript served
+        # publicly via GitHub Pages. Anyone who views page source can read the
+        # token. Mitigate this by granting the PAT ONLY the two scopes below:
+        #   • Actions: Write  — to trigger workflow_dispatch
+        #   • Contents: Write — so save-spin.yml can commit files
+        # Do NOT grant broader scopes (repo, admin, etc.).
+        # If you need stronger security, replace this with a GitHub App or a
+        # serverless proxy that calls workflow_dispatch on behalf of the client.
         env:
           GHP: ${{ secrets.GHP }}
         run: |
