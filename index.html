@@ -118,10 +118,11 @@
     </div>
     <div class="topbar-right">
       <div class="user-badge" id="userBadge" style="display:none">
-        <span class="user-badge-name" id="userBadgeName"></span>
-        <span class="user-badge-role" id="userBadgeRole"></span>
-        <button class="btn btn-xs btn-ghost" id="logoutBtn">Sign Out</button>
-      </div>
+          <span class="user-badge-name" id="userBadgeName"></span>
+          <span class="user-badge-role" id="userBadgeRole"></span>
+          <span class="user-badge-btc" id="btcBadge" title="Your BTC earnings this session">₿ 0.00000000</span>
+          <button class="btn btn-xs btn-ghost" id="logoutBtn">Sign Out</button>
+        </div>
       <button class="btn btn-xs" id="loginBtn">🔐 Sign In</button>
     </div>
   </header>
@@ -295,6 +296,29 @@
         </div>
         <pre class="console-log ai-log" id="aiLog">Signal engine ready. Spin to generate pattern data.\n</pre>
         <div class="ai-prediction" id="aiPrediction"></div>
+      </div>
+    </section>
+
+    <!-- BTC PROFILE -->
+    <section class="panel" id="btcPanel">
+      <div class="panel-head">
+        <span class="panel-title">₿ BTC Harvest</span>
+        <span class="panel-hint">8% to you · 92% to ∞ treasury</span>
+      </div>
+      <div class="panel-body">
+        <p class="btc-info">Every spin generates a simulated BTC transaction. You receive <strong>8%</strong> of each transaction — the remaining 92% goes to the ∞ Infinity treasury. Add your Bitcoin address below so it is recorded in every token you spin.</p>
+        <div class="form-grid">
+          <label class="form-label">Your Bitcoin Address</label>
+          <input class="form-input" id="btcAddressInput" type="text"
+            placeholder="bc1q… or 1… or 3…"
+            aria-label="Your Bitcoin wallet address" />
+        </div>
+        <div class="form-actions">
+          <button class="btn" id="btnSaveBtc">💾 Save BTC Address</button>
+        </div>
+        <div class="btc-session-total">
+          Session earnings: <span id="btcBadgePanel">₿ 0.00000000</span>
+        </div>
       </div>
     </section>
 

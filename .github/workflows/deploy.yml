@@ -1,0 +1,51 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Inject GHP token into cfg.js
+        # The GHP secret must be set in the repository Settings → Secrets → Actions
+        # with the name GHP. The token needs: Actions → Write scope (to trigger
+        # workflow_dispatch) and Contents → Write scope (used by save-spin.yml).
+        # NOTE: the injected token will be visible in page source, so keep its
+        # permissions limited to the two scopes above.
+        env:
+          GHP: ${{ secrets.GHP }}
+        run: |
+          if [ -z "$GHP" ]; then
+            echo "::warning::GHP secret is not set — deploying without commit token."
+          else
+            sed -i \
+              's|window\.MARIO_SPIN_TOKEN = window\.MARIO_SPIN_TOKEN \|\| "";|window.MARIO_SPIN_TOKEN = "'"$GHP"'";|' \
+              assets/cfg.js
+            echo "GHP token injected into assets/cfg.js"
+          fi
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+
+      - uses: actions/deploy-pages@v4
+        id: deployment

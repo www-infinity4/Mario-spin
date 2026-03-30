@@ -63,7 +63,8 @@ window.AUTH = (() => {
       users[ADMIN_USERNAME] = {
         username: ADMIN_USERNAME, email: ADMIN_EMAIL, passwordHash: hash,
         role: "admin", createdAt: new Date().toISOString(),
-        spinCount: 0, totalScore: 0, conversations: [], tokens: [],
+        spinCount: 0, totalScore: 0, btcAddress: "", btcEarned: 0,
+        conversations: [], tokens: [],
       };
       saveUsers(users);
     }
@@ -108,7 +109,8 @@ window.AUTH = (() => {
     const user = {
       username, email, passwordHash: hash, role: "user",
       createdAt: new Date().toISOString(),
-      spinCount: 0, totalScore: 0, conversations: [], tokens: [],
+      spinCount: 0, totalScore: 0, btcAddress: "", btcEarned: 0,
+      conversations: [], tokens: [],
     };
     users[username] = user;
     saveUsers(users);
@@ -120,13 +122,30 @@ window.AUTH = (() => {
   function currentUser()  { return getSession(); }
   function isAdmin()      { const u = getSession(); return u && u.role === "admin"; }
 
-  function updateUserStats(username, spinCount, totalScore) {
+  function updateUserStats(username, spinCount, totalScore, btcEarned) {
     const users = getUsers();
     if (users[username]) {
       users[username].spinCount  = spinCount;
       users[username].totalScore = totalScore;
+      if (btcEarned !== undefined) users[username].btcEarned = btcEarned;
       saveUsers(users);
     }
+  }
+
+  function setBtcAddress(username, btcAddress) {
+    if (typeof btcAddress !== "string") return false;
+    // Basic Bitcoin address format check (P2PKH, P2SH, Bech32)
+    if (btcAddress && !/^(1|3|bc1)[a-zA-Z0-9]{25,62}$/.test(btcAddress)) return false;
+    const users = getUsers();
+    if (!users[username]) return false;
+    users[username].btcAddress = btcAddress;
+    saveUsers(users);
+    return true;
+  }
+
+  function getBtcAddress(username) {
+    const users = getUsers();
+    return (users[username] && users[username].btcAddress) || "";
   }
 
   function addTokenToUser(username, tokenSummary) {
@@ -135,6 +154,10 @@ window.AUTH = (() => {
     users[username].tokens = users[username].tokens || [];
     users[username].tokens.push(tokenSummary);
     if (users[username].tokens.length > 500) users[username].tokens = users[username].tokens.slice(-500);
+    // Accumulate BTC earned
+    if (tokenSummary.btcUserShare) {
+      users[username].btcEarned = (users[username].btcEarned || 0) + tokenSummary.btcUserShare;
+    }
     saveUsers(users);
   }
 
@@ -162,7 +185,10 @@ window.AUTH = (() => {
     const publicProfile = {
       username: user.username, role: user.role, createdAt: user.createdAt,
       spinCount: user.spinCount, totalScore: user.totalScore,
-      tokenCount: (user.tokens || []).length, savedAt: new Date().toISOString(),
+      tokenCount: (user.tokens || []).length,
+      btcEarned: user.btcEarned || 0,
+      btcAddress: user.btcAddress || "",
+      savedAt: new Date().toISOString(),
     };
     const dispatchUrl =
       "https://api.github.com/repos/" + owner + "/" + repo +
@@ -207,12 +233,14 @@ window.AUTH = (() => {
     return Object.values(users).map((u) => ({
       username: u.username, email: u.email, role: u.role,
       createdAt: u.createdAt, spinCount: u.spinCount, totalScore: u.totalScore,
+      btcEarned: u.btcEarned || 0, btcAddress: u.btcAddress || "",
     }));
   }
 
   return {
     ensureAdmin, login, register, logout, currentUser, isAdmin,
-    updateUserStats, addTokenToUser, saveConversation, saveProfileToRepo,
+    updateUserStats, addTokenToUser, setBtcAddress, getBtcAddress,
+    saveConversation, saveProfileToRepo,
     getConversations, getUserList,
   };
 })();

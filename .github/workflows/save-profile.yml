@@ -1,0 +1,48 @@
+name: Save User Profile
+
+on:
+  workflow_dispatch:
+    inputs:
+      username:
+        description: "Username"
+        required: true
+      profile_data:
+        description: "JSON public profile data"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  save:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate username
+        env:
+          USERNAME: ${{ inputs.username }}
+        run: |
+          if [[ ! "$USERNAME" =~ ^[a-zA-Z0-9_-]{2,32}$ ]]; then
+            echo "::error::Invalid username: $USERNAME"
+            exit 1
+          fi
+
+      - name: Write profile file
+        env:
+          PROFILE_DATA: ${{ inputs.profile_data }}
+          USERNAME: ${{ inputs.username }}
+        run: |
+          mkdir -p profiles
+          printf '%s\n' "$PROFILE_DATA" > "profiles/${USERNAME}.json"
+
+      - name: Commit and push
+        env:
+          USERNAME: ${{ inputs.username }}
+        run: |
+          git config user.email "mario-spin-bot@users.noreply.github.com"
+          git config user.name "Mario Spin Bot"
+          git add "profiles/${USERNAME}.json"
+          git diff --cached --quiet && echo "Nothing to commit" && exit 0
+          git commit -m "profile: update ${USERNAME}"
+          git push

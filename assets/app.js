@@ -32,6 +32,7 @@
   ------------------------------------------------------------------ */
   let spinCount  = 0;
   let totalScore = 0;
+  let totalBtcEarned = 0;
   let isSpinning = false;
   let history    = [];   // { spinData, commitInfo, article }
   let lastArticle = null;
@@ -152,6 +153,29 @@
   function getAuthToken() { return (window.MARIO_SPIN_TOKEN || "").trim(); }
 
   /* ------------------------------------------------------------------
+     BTC HARVEST — simulated Bitcoin reward per spin
+     Treasury keeps 92 %; user earns 8 %.
+     Base amount in BTC per tier (very small amounts, game mechanic).
+  ------------------------------------------------------------------ */
+  const BTC_TIER = {
+    jackpot:    0.00005,   // 5000 satoshis
+    "win-big":  0.000012,  // 1200 satoshis
+    "win-medium":0.000005, //  500 satoshis
+    "win-small":0.000002,  //  200 satoshis
+    lose:       0.0000001, //   10 satoshis
+  };
+  const BTC_USER_PCT    = 0.08;   // 8 % to user
+  const BTC_TREASURY    = 0.92;   // 92 % to ∞ treasury
+  const TREASURY_ADDR   = "bc1qinfinity4treasury0000000000000000000000000";
+
+  function calcBtcReward(tier) {
+    const total   = BTC_TIER[tier] || BTC_TIER.lose;
+    const user    = parseFloat((total * BTC_USER_PCT).toFixed(8));
+    const treasury = parseFloat((total * BTC_TREASURY).toFixed(8));
+    return { btcTransaction: total, btcUserShare: user, btcTreasury: treasury };
+  }
+
+  /* ------------------------------------------------------------------
      GITHUB API — TRIGGER SAVE-SPIN WORKFLOW
   ------------------------------------------------------------------ */
   async function commitSpinRecord(spinData) {
@@ -258,6 +282,9 @@
     const meta    = $("researchPanelMeta");
     if (!panel || !preview || !article) return;
     meta.textContent = `IF: ${article.impactFactor} · ${(article.domains || []).slice(0, 2).join(", ").replace(/_/g, " ")}`;
+    const btcLine = article.btcTransaction != null
+      ? `<div class="res-btc">₿ BTC Harvest: <strong>${article.btcTransaction.toFixed(8)}</strong> total — You earn <strong>${article.btcUserShare.toFixed(8)} BTC</strong> (8%) · Treasury: ${article.btcTreasury.toFixed(8)} BTC (92%)${article.btcAddress ? ` → <code>${escHtml(article.btcAddress)}</code>` : ""}</div>`
+      : "";
     preview.innerHTML = `
       <div class="res-title">${escHtml(article.title)}</div>
       <div class="res-meta">
@@ -266,9 +293,21 @@
         <span>DOI: ${escHtml(article.doi)}</span>
       </div>
       <div class="res-keywords">${(article.keywords || []).map((k) => `<span class="res-kw">${escHtml(k)}</span>`).join("")}</div>
+      ${btcLine}
       <div class="res-abstract">${escHtml(article.abstract)}</div>
     `;
     panel.style.display = "";
+  }
+
+  /* ------------------------------------------------------------------
+     BTC DISPLAY — update user badge + BTC panel
+  ------------------------------------------------------------------ */
+  function updateBtcDisplay() {
+    const val = `₿ ${totalBtcEarned.toFixed(8)}`;
+    const btcBadge = $("btcBadge");
+    if (btcBadge) btcBadge.textContent = val;
+    const btcBadgePanel = $("btcBadgePanel");
+    if (btcBadgePanel) btcBadgePanel.textContent = val;
   }
 
   /* ------------------------------------------------------------------
@@ -304,6 +343,7 @@
         ${article.searchEnriched ? '<span class="res-badge enriched">🌐 Search Enriched</span>' : ""}
       </div>
       <div class="res-keywords">${(article.keywords || []).map((k) => `<span class="res-kw">${escHtml(k)}</span>`).join("")}</div>
+      ${article.btcTransaction != null ? `<div class="res-btc">₿ <strong>BTC Harvest:</strong> ${article.btcTransaction.toFixed(8)} BTC total — <strong>You earn ${article.btcUserShare.toFixed(8)} BTC (8%)</strong>${article.btcAddress ? ` → <code>${escHtml(article.btcAddress)}</code>` : " (no BTC address set — update your profile)"} — Treasury: ${article.btcTreasury.toFixed(8)} BTC (92%)</div>` : ""}
       <div class="res-section"><h4>Abstract</h4><p>${escHtml(article.abstract)}</p></div>
       <div class="res-section"><h4>1. Introduction</h4><p>${escHtml(article.introduction)}</p></div>
       <div class="res-section"><h4>2. Materials &amp; Methods</h4><p>${escHtml(article.methods)}</p></div>
@@ -380,6 +420,10 @@
       ? `<div class="hist-research">🔬 ${escHtml(article.title.slice(0, 80))}${article.title.length > 80 ? "…" : ""}</div>`
       : "";
 
+    const btcSnippet = spinData.btcUserShare != null
+      ? `<div class="hist-btc">₿ +${spinData.btcUserShare.toFixed(8)} BTC (8% of ${spinData.btcTransaction.toFixed(8)})</div>`
+      : "";
+
     // Thumbnail row using uploaded images
     const thumbs = spinData.symbolImgs
       ? spinData.symbolImgs.map((src) =>
@@ -391,6 +435,7 @@
       <div class="hist-symbols">${thumbs}</div>
       <div class="hist-result ${resultClass}">${escHtml(spinData.result)}</div>
       <div class="hist-time">Spin #${spinData.spinNumber} · +${spinData.score} pts · ${new Date(spinData.timestamp).toLocaleTimeString()}</div>
+      ${btcSnippet}
       ${artSnippet}
       ${commitHtml}
     `;
@@ -470,9 +515,15 @@
       totalScore,
       repo: cfg.owner && cfg.repo ? `${cfg.owner}/${cfg.repo}` : "unset",
       deviceId: deviceId.join(" "),
+      // BTC harvest
+      ...calcBtcReward(evalResult.tier),
+      btcAddress: (window.AUTH && window.AUTH.currentUser())
+        ? window.AUTH.getBtcAddress(window.AUTH.currentUser().username)
+        : "",
     };
 
     log(`   Result: ${evalResult.label} (+${evalResult.score} pts, total: ${totalScore})`);
+    log(`   ₿ BTC: ${spinData.btcTransaction.toFixed(8)} BTC → you: ${spinData.btcUserShare.toFixed(8)} BTC (8%) · treasury: ${spinData.btcTreasury.toFixed(8)} BTC (92%)`, "ok");
 
     // 1. Generate research article immediately
     let article = null;
@@ -505,17 +556,21 @@
     // 4. Update auth stats if logged in
     const user = window.AUTH ? window.AUTH.currentUser() : null;
     if (user) {
-      window.AUTH.updateUserStats(user.username, spinCount, totalScore);
+      totalBtcEarned += spinData.btcUserShare;
+      window.AUTH.updateUserStats(user.username, spinCount, totalScore, totalBtcEarned);
       if (article) {
         window.AUTH.addTokenToUser(user.username, {
-          spinNumber: spinData.spinNumber,
-          timestamp:  spinData.timestamp,
-          tier:       spinData.tier,
-          score:      spinData.score,
-          title:      article.title,
-          doi:        article.doi,
+          spinNumber:   spinData.spinNumber,
+          timestamp:    spinData.timestamp,
+          tier:         spinData.tier,
+          score:        spinData.score,
+          title:        article.title,
+          doi:          article.doi,
+          btcUserShare: spinData.btcUserShare,
+          btcAddress:   spinData.btcAddress,
         });
       }
+      updateBtcDisplay();
     }
 
     isSpinning = false;
@@ -527,7 +582,7 @@
   ------------------------------------------------------------------ */
   function animateTicker() {
     const ticker = $("ticker");
-    const msg    = "MUSHROOM KINGDOM ACTIVE — SPIN TO POWER UP — COLLECT STARS — BEAT GOOMBA — ∞ ∞ ∞   ";
+    const msg    = "MUSHROOM KINGDOM ACTIVE — SPIN TO POWER UP — COLLECT STARS — BEAT GOOMBA — ₿ BTC HARVEST ACTIVE — 8% TO YOU — 92% TO ∞ TREASURY — RESEARCH COMMITTED EVERY SPIN — ∞ ∞ ∞   ";
     ticker.innerHTML = `<span class="tick-inner">${msg}${msg}</span>`;
   }
 
@@ -714,6 +769,10 @@
       loginBtn.style.display = "none";
       if (adminPanel) adminPanel.style.display = window.AUTH.isAdmin() ? "" : "none";
       if (window.AUTH.isAdmin()) renderAdminUserList();
+      // Pre-fill BTC address input if the panel exists
+      const btcInput = $("btcAddressInput");
+      if (btcInput) btcInput.value = window.AUTH.getBtcAddress(user.username);
+      updateBtcDisplay();
     } else {
       badge.style.display = "none";
       loginBtn.style.display = "";
@@ -728,7 +787,7 @@
       users.map((u) =>
         `<div style="font-size:12px;color:var(--muted);padding:4px 0;border-bottom:1px solid var(--stroke)">
           <strong style="color:var(--text)">${escHtml(u.username)}</strong>
-          (${escHtml(u.role)}) — ${u.spinCount} spins · ${u.totalScore} coins
+          (${escHtml(u.role)}) — ${u.spinCount} spins · ${u.totalScore} coins · ₿ ${(u.btcEarned || 0).toFixed(8)}
         </div>`
       ).join("");
   }
@@ -816,6 +875,8 @@
 
     $("logoutBtn").addEventListener("click", () => {
       window.AUTH.logout();
+      totalBtcEarned = 0;
+      updateBtcDisplay();
       updateAuthUI();
       log("👋 Signed out.", "warn");
     });
@@ -826,6 +887,22 @@
     [$("regUser"), $("regEmail"), $("regPass")].forEach((el) => {
       el.addEventListener("keydown", (e) => { if (e.key === "Enter") $("btnRegister").click(); });
     });
+
+    // BTC address save
+    const btnSaveBtc = $("btnSaveBtc");
+    if (btnSaveBtc) {
+      btnSaveBtc.addEventListener("click", () => {
+        const user = window.AUTH ? window.AUTH.currentUser() : null;
+        if (!user) { log("⚠️  Sign in to save your BTC address.", "warn"); return; }
+        const addr = ($("btcAddressInput") || {}).value || "";
+        const ok = window.AUTH.setBtcAddress(user.username, addr.trim());
+        if (ok) {
+          log(`₿ BTC address saved: ${addr.trim() || "(cleared)"}`, "ok");
+        } else {
+          log("❌ Invalid Bitcoin address format.", "err");
+        }
+      });
+    }
   }
 
   /* ------------------------------------------------------------------
