@@ -1,0 +1,48 @@
+name: Save Spin Record
+
+on:
+  workflow_dispatch:
+    inputs:
+      spin_data:
+        description: "JSON spin record"
+        required: true
+      filename:
+        description: "Target file path — must match spins/spin-<timestamp>.json"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  save:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate filename
+        env:
+          FILENAME: ${{ inputs.filename }}
+        run: |
+          if [[ ! "$FILENAME" =~ ^spins/spin-[0-9T-]+\.json$ ]]; then
+            echo "::error::Invalid filename: $FILENAME"
+            exit 1
+          fi
+
+      - name: Write spin file
+        env:
+          SPIN_DATA: ${{ inputs.spin_data }}
+          FILENAME: ${{ inputs.filename }}
+        run: |
+          mkdir -p spins
+          printf '%s\n' "$SPIN_DATA" > "$FILENAME"
+
+      - name: Commit and push
+        env:
+          FILENAME: ${{ inputs.filename }}
+        run: |
+          git config user.email "mario-spin-bot@users.noreply.github.com"
+          git config user.name "Mario Spin Bot"
+          git add "$FILENAME"
+          git diff --cached --quiet && echo "Nothing to commit" && exit 0
+          git commit -m "spin: record $FILENAME"
+          git push

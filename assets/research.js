@@ -19,20 +19,28 @@ window.RESEARCH = (() => {
 
   /* ------------------------------------------------------------------
      SYMBOL → SCIENCE DOMAIN MAPPING
+     Covers both legacy symbols and the active Mario Spin game symbols:
+       MUSHROOM, STAR, GOOMBA, MARIO, LUIGI, COIN
   ------------------------------------------------------------------ */
   const SYMBOL_DOMAINS = {
-    BTC:   ["quantum_computing", "cryptography", "number_theory"],
-    DIAM:  ["materials_science", "crystallography", "carbon_chemistry"],
-    INF:   ["mathematics", "topology", "information_theory"],
-    BLOCK: ["solid_state_physics", "polymer_chemistry", "nanotechnology"],
-    STAR:  ["astrophysics", "nuclear_fusion", "stellar_evolution"],
-    MARIO: ["mycology", "biochemistry", "pharmacology"],
-    CROWN: ["metallurgy", "electrochemistry", "surface_science"],
-    PUMP:  ["aerospace", "fluid_dynamics", "thermodynamics"],
-    BAG:   ["biophysics", "molecular_biology", "proteomics"],
-    FIRE:  ["combustion_chemistry", "plasma_physics", "thermodynamics"],
-    GOLD:  ["noble_metal_chemistry", "catalysis", "bioelectronics"],
-    MOON:  ["selenology", "tidal_mechanics", "planetary_science"],
+    // ── Active game symbols ────────────────────────────────────────
+    MUSHROOM: ["mycology", "biochemistry", "electromagnetic_signals"],
+    STAR:     ["astrophysics", "nuclear_fusion", "scalar_wave_physics"],
+    GOOMBA:   ["solid_state_physics", "nanotechnology", "bioelectric_fields"],
+    MARIO:    ["signal_medicine", "bioelectric_fields", "electromagnetic_signals"],
+    LUIGI:    ["plasma_physics", "thermodynamics", "scalar_wave_physics"],
+    COIN:     ["cryptography", "number_theory", "information_theory"],
+    // ── Legacy / future symbols ────────────────────────────────────
+    BTC:      ["quantum_computing", "cryptography", "number_theory"],
+    DIAM:     ["materials_science", "crystallography", "carbon_chemistry"],
+    INF:      ["mathematics", "topology", "information_theory"],
+    BLOCK:    ["solid_state_physics", "polymer_chemistry", "nanotechnology"],
+    CROWN:    ["metallurgy", "electrochemistry", "surface_science"],
+    PUMP:     ["aerospace", "fluid_dynamics", "thermodynamics"],
+    BAG:      ["biophysics", "molecular_biology", "proteomics"],
+    FIRE:     ["combustion_chemistry", "plasma_physics", "thermodynamics"],
+    GOLD:     ["noble_metal_chemistry", "catalysis", "bioelectronics"],
+    MOON:     ["selenology", "tidal_mechanics", "planetary_science"],
   };
 
   /* ------------------------------------------------------------------
@@ -152,6 +160,41 @@ window.RESEARCH = (() => {
         "neutron star equation of state","stellar opacity coefficient"],
       verbs: ["fuse","expand","contract","eject","collapse","cool"],
       adjectives: ["post-main-sequence","carbon-oxygen","electron-degenerate","convective","radiative"],
+    },
+    electromagnetic_signals: {
+      nouns: ["electromagnetic field oscillation","photon emission spectrum","wave-particle duality",
+        "radio-frequency resonance","microwave absorption coefficient","infrared thermal signature",
+        "coherent photon beam","signal propagation velocity","antenna radiation pattern",
+        "electromagnetic pulse envelope","standing wave node","field gradient tensor"],
+      verbs: ["radiate","propagate","resonate","absorb","reflect","modulate","transduce"],
+      adjectives: ["coherent","pulsed","broadband","narrowband","polarised","non-ionising","far-field"],
+    },
+    bioelectric_fields: {
+      nouns: ["endogenous bioelectric field","galvanotaxis gradient","transmembrane potential",
+        "wound-healing current","ion flux density","neural oscillation frequency",
+        "morphogenetic signal pathway","electrotaxis response threshold",
+        "cell membrane conductance","biophotonic emission","electrodermal activity"],
+      verbs: ["polarise","depolarise","repolarise","transduce","modulate","amplify","sense"],
+      adjectives: ["endogenous","exogenous","low-frequency","biocompatible","non-invasive",
+        "frequency-specific","membrane-permeabilising"],
+    },
+    scalar_wave_physics: {
+      nouns: ["scalar potential field","longitudinal wave component","Tesla coil resonance",
+        "zero-point energy fluctuation","torsion field interaction","non-Hertzian wave mode",
+        "standing scalar wave","field coupling coefficient","vacuum energy density",
+        "phase conjugate wave","subtle energy transduction"],
+      verbs: ["couple","resonate","propagate","store","discharge","phase-conjugate","transduce"],
+      adjectives: ["longitudinal","scalar","non-transverse","resonant","sub-quantum",
+        "vacuum-coupled","phase-locked"],
+    },
+    signal_medicine: {
+      nouns: ["therapeutic signal frequency","resonant healing waveform","bioresonance spectrum",
+        "photobiomodulation dose","pulsed electromagnetic field","frequency-specific microcurrent",
+        "low-level laser therapy","acoustic mechanotransduction","terahertz spectroscopy band",
+        "charged particle emission","radium decay product","signal storage medium"],
+      verbs: ["irradiate","stimulate","modulate","charge","discharge","resonate","heal"],
+      adjectives: ["therapeutic","sub-thermal","non-ionising","frequency-tuned",
+        "bioactive","dose-dependent","signal-driven"],
     },
     mycology: {
       nouns: ["mycorrhizal network hyphal anastomosis","sporocarp morphology",
@@ -492,7 +535,8 @@ window.RESEARCH = (() => {
      MAIN: generateResearchArticle
   ------------------------------------------------------------------ */
   function generateResearchArticle(spinData) {
-    const labels = spinData.symbolLabels || [];
+    // Support both spinData.symbols (app.js) and spinData.symbolLabels (legacy)
+    const labels = spinData.symbols || spinData.symbolLabels || [];
     const domains = getDomainsForSpin(labels);
     const vocab = getVocabForDomains(domains);
     const year = new Date().getFullYear();
@@ -521,6 +565,11 @@ window.RESEARCH = (() => {
       spinNumber: spinData.spinNumber || 0,
       generatedAt: new Date().toISOString(),
       searchEnriched: false,
+      // BTC harvest fields — injected from spinData if present
+      btcTransaction:  spinData.btcTransaction  || null,
+      btcUserShare:    spinData.btcUserShare     || null,
+      btcTreasury:     spinData.btcTreasury      || null,
+      btcAddress:      spinData.btcAddress       || null,
     };
   }
 
@@ -600,6 +649,8 @@ window.RESEARCH = (() => {
     const now = new Date().toLocaleString();
     const totalScore = allSpinRecords.reduce((s, r) => s + (r.spinData.score || 0), 0);
     const wins = allSpinRecords.filter((r) => r.spinData.tier !== "lose").length;
+    const totalBtcUser = allSpinRecords.reduce((s, r) =>
+      s + ((r.spinData.btcUserShare) || 0), 0);
 
     const spinCards = allSpinRecords
       .slice()
@@ -616,6 +667,7 @@ window.RESEARCH = (() => {
             <strong>DOI:</strong> ${escH(article.doi)}</p>
             <p class="art-meta"><strong>Keywords:</strong> ${escH((article.keywords || []).join(" · "))}</p>
             <p><strong>Abstract:</strong> ${escH(article.abstract)}</p>
+            ${article.btcTransaction != null ? `<p class="btc-line">₿ BTC Harvest: <strong>${article.btcTransaction.toFixed(8)} BTC</strong> total — User (8%): <strong>${article.btcUserShare.toFixed(8)} BTC</strong> → <code>${escH(article.btcAddress || "no address set")}</code> — Treasury (92%): ${article.btcTreasury.toFixed(8)} BTC</p>` : ""}
             ${article.externalContext ? `<p class="ext"><strong>🦆 DDG Context (${escH(article.externalContext.source)}):</strong> ${escH(article.externalContext.abstract)}</p>` : ""}
             ${article.archiveSources && article.archiveSources.length ? `<p class="ext"><strong>🗄️ Archive Sources:</strong> ${article.archiveSources.map(a => `<a href="${escH(a.url)}">${escH(a.title)}</a>`).join(" · ")}</p>` : ""}
           </div>`
@@ -664,6 +716,7 @@ window.RESEARCH = (() => {
   .art h3{color:#00d4ff;font-size:14px;margin:0 0 6px;}
   .art-meta{font-size:11px;color:#888;margin:4px 0;}
   .ext{font-size:12px;color:#a78bfa;margin-top:8px;}
+  .btc-line{font-size:12px;color:#f7931a;margin-top:8px;background:rgba(247,147,26,.1);padding:6px 10px;border-radius:6px;border-left:3px solid #f7931a;}
   a{color:#00d4ff;}
   footer{margin-top:40px;color:#555;font-size:12px;text-align:center;}
 </style>
@@ -677,6 +730,7 @@ window.RESEARCH = (() => {
   <div class="stat"><div class="stat-val">${allSpinRecords.length - wins}</div><div class="stat-label">Losses</div></div>
   <div class="stat"><div class="stat-val">${totalScore.toLocaleString()}</div><div class="stat-label">Total Score</div></div>
   <div class="stat"><div class="stat-val">${allSpinRecords.length ? (wins / allSpinRecords.length * 100).toFixed(1) : 0}%</div><div class="stat-label">Win Rate</div></div>
+  <div class="stat"><div class="stat-val">₿ ${totalBtcUser.toFixed(8)}</div><div class="stat-label">BTC Earned (8%)</div></div>
 </div>
 <h2>📜 Spin Records with Research Tokens</h2>
 ${spinCards}

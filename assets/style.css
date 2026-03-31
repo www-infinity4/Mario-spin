@@ -734,3 +734,45 @@ body {
   );
   border-radius: 28px 28px 0 0;
 }
+
+/* ===== BTC HARVEST ===== */
+.user-badge-btc {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: #f7931a;
+  background: rgba(247,147,26,.12);
+  padding: 2px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(247,147,26,.25);
+}
+.res-btc {
+  font-size: 12px;
+  color: #f7931a;
+  background: rgba(247,147,26,.1);
+  border-left: 3px solid #f7931a;
+  padding: 8px 12px;
+  border-radius: 0 8px 8px 0;
+  margin: 10px 0;
+}
+.hist-btc {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: #f7931a;
+  margin: 4px 0;
+}
+.btc-info {
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 16px;
+  line-height: 1.6;
+}
+.btc-session-total {
+  margin-top: 12px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.btc-session-total span {
+  font-family: var(--mono);
+  color: #f7931a;
+  font-weight: 700;
+}

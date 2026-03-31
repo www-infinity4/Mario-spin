@@ -1,0 +1,54 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Inject GHP token into cfg.js
+        # SECURITY NOTE: This embeds the PAT in client-side JavaScript served
+        # publicly via GitHub Pages. Anyone who views page source can read the
+        # token. Mitigate this by granting the PAT ONLY the two scopes below:
+        #   • Actions: Write  — to trigger workflow_dispatch
+        #   • Contents: Write — so save-spin.yml can commit files
+        # Do NOT grant broader scopes (repo, admin, etc.).
+        # If you need stronger security, replace this with a GitHub App or a
+        # serverless proxy that calls workflow_dispatch on behalf of the client.
+        env:
+          GHP: ${{ secrets.GHP }}
+        run: |
+          if [ -z "$GHP" ]; then
+            echo "::warning::GHP secret is not set — deploying without commit token."
+          else
+            sed -i \
+              's|window\.MARIO_SPIN_TOKEN = window\.MARIO_SPIN_TOKEN \|\| "";|window.MARIO_SPIN_TOKEN = "'"$GHP"'";|' \
+              assets/cfg.js
+            echo "GHP token injected into assets/cfg.js"
+          fi
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+
+      - uses: actions/deploy-pages@v4
+        id: deployment
