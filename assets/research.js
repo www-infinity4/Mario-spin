@@ -41,6 +41,26 @@ window.RESEARCH = (() => {
     FIRE:     ["combustion_chemistry", "plasma_physics", "thermodynamics"],
     GOLD:     ["noble_metal_chemistry", "catalysis", "bioelectronics"],
     MOON:     ["selenology", "tidal_mechanics", "planetary_science"],
+    // ── New symbols ───────────────────────────────────────────────────
+    TOAD:         ["mycology", "biochemistry", "molecular_biology"],
+    PEACH:        ["pharmacology", "biochemistry", "signal_medicine"],
+    BOWSER:       ["plasma_physics", "nuclear_fusion", "electromagnetic_signals"],
+    BANZAI:       ["aerospace", "fluid_dynamics", "combustion_chemistry"],
+    "? BLOCK":    ["mathematics", "information_theory", "cryptography"],
+    "? MARK":     ["topology", "mathematics", "quantum_computing"],
+    "FLYING ?":   ["aerospace", "scalar_wave_physics", "electromagnetic_signals"],
+    "MARIO+LUIGI":["bioelectric_fields", "signal_medicine", "electromagnetic_signals"],
+    "LUIGI 2":    ["plasma_physics", "thermodynamics", "scalar_wave_physics"],
+    "LUIGI 3":    ["plasma_physics", "thermodynamics", "scalar_wave_physics"],
+    "LUIGI 4":    ["plasma_physics", "thermodynamics", "scalar_wave_physics"],
+    "TOAD 2":     ["mycology", "biochemistry", "molecular_biology"],
+    "POWER-UP":   ["bioelectric_fields", "signal_medicine", "electromagnetic_signals"],
+    "1-UP":       ["molecular_biology", "biochemistry", "pharmacology"],
+    WORLD:        ["planetary_science", "selenology", "tidal_mechanics"],
+    WARP:         ["quantum_computing", "topology", "mathematics"],
+    CASTLE:       ["materials_science", "metallurgy", "solid_state_physics"],
+    KING:         ["noble_metal_chemistry", "catalysis", "metallurgy"],
+    YOSHI:        ["molecular_biology", "biophysics", "proteomics"],
   };
 
   /* ------------------------------------------------------------------

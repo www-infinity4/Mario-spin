@@ -68,6 +68,41 @@
   const SYMBOL_HEIGHT = 160;
 
   /* ------------------------------------------------------------------
+     SOUND ENGINE — Mario .wav files from assets/sounds/
+  ------------------------------------------------------------------ */
+  const SOUNDS = {};
+  const SOUND_MUTED_KEY = "ms_sound_muted_v1";
+  let soundEnabled = !localStorage.getItem(SOUND_MUTED_KEY);
+
+  function initSounds() {
+    const files = {
+      spin:    "assets/sounds/beep.wav",
+      coin:    "assets/sounds/brick.wav",
+      win:     "assets/sounds/billfirework.wav",
+      jackpot: "assets/sounds/1up.wav",
+      lose:    "assets/sounds/bowserfall.wav",
+    };
+    Object.entries(files).forEach(([key, src]) => {
+      try {
+        const a = new Audio(src);
+        a.preload = "auto";
+        SOUNDS[key] = a;
+      } catch (_) {}
+    });
+  }
+
+  function playSound(name) {
+    if (!soundEnabled) return;
+    const snd = SOUNDS[name];
+    if (!snd) return;
+    try {
+      const clone = snd.cloneNode();
+      clone.volume = 0.55;
+      clone.play().catch(() => {});
+    } catch (_) {}
+  }
+
+  /* ------------------------------------------------------------------
      STATE
   ------------------------------------------------------------------ */
   let spinCount  = 0;
@@ -77,6 +112,63 @@
   let history    = [];   // { spinData, commitInfo, article }
   let lastArticle = null;
   let cfg = { owner: "", repo: "", branch: "main" };
+
+  /* ------------------------------------------------------------------
+     PENDING COMMITS — queue spins that couldn't auto-commit so the
+     user can retry manually (or when the GHP token becomes available)
+  ------------------------------------------------------------------ */
+  const PENDING_KEY = "ms_pending_commits_v1";
+
+  function queuePendingCommit(spinData) {
+    try {
+      const q = JSON.parse(localStorage.getItem(PENDING_KEY) || "[]");
+      q.push({ spinData, queuedAt: new Date().toISOString() });
+      if (q.length > 50) q.splice(0, q.length - 50);
+      localStorage.setItem(PENDING_KEY, JSON.stringify(q));
+    } catch (_) {}
+    updateRetryBtn();
+    log(`📦 Spin #${spinData.spinNumber} queued — use Retry Commits to commit when GHP is ready.`, "warn");
+  }
+
+  function getPendingCommits() {
+    try { return JSON.parse(localStorage.getItem(PENDING_KEY) || "[]"); }
+    catch (_) { return []; }
+  }
+
+  function removePendingCommit(idx) {
+    try {
+      const q = getPendingCommits();
+      q.splice(idx, 1);
+      localStorage.setItem(PENDING_KEY, JSON.stringify(q));
+    } catch (_) {}
+    updateRetryBtn();
+  }
+
+  function updateRetryBtn() {
+    const btn = $("retryCommitsBtn");
+    if (!btn) return;
+    const n = getPendingCommits().length;
+    btn.style.display = n > 0 ? "" : "none";
+    if (n > 0) btn.textContent = `📤 Retry ${n} Commit${n !== 1 ? "s" : ""}`;
+  }
+
+  async function retryPendingCommits() {
+    const q = getPendingCommits();
+    if (!q.length) { log("ℹ️ No pending commits.", "warn"); return; }
+    const token = getAuthToken();
+    if (!token) {
+      log("❌ GHP secret not set — add the GHP secret in GitHub repo Settings → Secrets & Variables → Actions, then redeploy.", "err");
+      return;
+    }
+    log(`📤 Retrying ${q.length} pending commit(s)…`);
+    let ok = 0;
+    for (let i = q.length - 1; i >= 0; i--) {
+      const result = await commitSpinRecord(q[i].spinData);
+      if (result) { removePendingCommit(i); ok++; }
+    }
+    log(`✅ Retry done: ${ok} committed, ${getPendingCommits().length} still pending.`, "ok");
+    updateRetryBtn();
+  }
 
   /* ------------------------------------------------------------------
      DOM REFS
@@ -509,7 +601,7 @@
     spinBtn.disabled = true;
 
     pullLever();
-    resultBar.className = "result-bar";
+    playSound("spin");
     resultText.textContent = "Spinning…";
     winOverlay.textContent = "";
     winOverlay.className = "win-overlay";
@@ -539,9 +631,12 @@
       winOverlay.textContent = "🌟 SUPER STAR! 🌟";
       winOverlay.className = "win-overlay show";
       burstCoins(14);
+      playSound("jackpot");
       setTimeout(() => { winOverlay.className = "win-overlay"; }, 2800);
-    } else if (evalResult.tier === "win-big")    burstCoins(8);
-    else if (evalResult.tier === "win-medium")   burstCoins(4);
+    } else if (evalResult.tier === "win-big")  { burstCoins(8); playSound("win"); }
+    else if (evalResult.tier === "win-medium") { burstCoins(4); playSound("win"); }
+    else if (evalResult.tier === "win-small")  { playSound("coin"); }
+    else                                         { playSound("lose"); }
 
     const spinData = {
       spinNumber:   spinCount,
@@ -578,8 +673,9 @@
 
     if (article) spinData.researchArticle = article;
 
-    // 2. Commit to GitHub
+    // 2. Commit to GitHub (auto + manual fallback queue)
     const commitInfo = await commitSpinRecord(spinData);
+    if (!commitInfo) queuePendingCommit(spinData);
 
     // 3. Enrich article in background
     if (article) {
@@ -611,6 +707,10 @@
         });
       }
       updateBtcDisplay();
+      // Auto-save profile to repo after every spin
+      if (getAuthToken() && cfg.owner && cfg.repo) {
+        window.AUTH.saveProfileToRepo(user.username, getAuthToken(), cfg.owner, cfg.repo, cfg.branch).catch(() => {});
+      }
     }
 
     isSpinning = false;
@@ -1003,6 +1103,9 @@
       }
     });
 
+    const retryBtn = $("retryCommitsBtn");
+    if (retryBtn) retryBtn.addEventListener("click", retryPendingCommits);
+
     wireIdentity();
     wireAuth();
     wireHamburger();
@@ -1020,8 +1123,10 @@
     saveDeviceId(deviceId);
 
     initReels();
+    initSounds();
     animateTicker();
     wireEvents();
+    updateRetryBtn();
 
     if (!localStorage.getItem(IDENTITY_KEY + "_ts")) {
       localStorage.setItem(IDENTITY_KEY + "_ts", new Date().toISOString());
@@ -1041,7 +1146,7 @@
     } else {
       log("⚠️  GHP secret not found — spins are local only.", "warn");
     }
-    log("🎮 Hit SPIN & GO! (or press Space) to start your adventure!");
+    log("🎮 Hit SPIN (or press Space) to start your adventure!");
     log("🔐 Sign in to save power-up tokens and build your profile.");
   }
 
