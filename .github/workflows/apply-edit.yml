@@ -1,0 +1,51 @@
+name: Apply AI Edit
+on:
+  workflow_dispatch:
+    inputs:
+      replacement_html:
+        description: "Replacement HTML"
+        required: true
+      commit_message:
+        description: "Commit message"
+        required: true
+        default: "AI page update"
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  apply-edit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Replace content
+        run: |
+          python3 - <<'PY'
+          import os, re
+          path = "index.html"
+          replacement = os.environ["REPLACEMENT_HTML"]
+          with open(path, "r", encoding="utf-8") as f:
+              src = f.read()
+          pattern = r'(<div id="contentArea">)(.*?)(</div>)'
+          out = re.sub(pattern, r'\1\n' + replacement + r'\n\3', src, flags=re.S)
+          if out == src:
+              raise SystemExit("Could not find #contentArea")
+          with open(path, "w", encoding="utf-8") as f:
+              f.write(out)
+          PY
+        env:
+          REPLACEMENT_HTML: ${{ github.event.inputs.replacement_html }}
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html ai-editor.js .github/workflows/apply-edit.yml
+          git commit -m "${{ github.event.inputs.commit_message }}" || echo "No changes"
+          git push
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+      - uses: actions/deploy-pages@v4
