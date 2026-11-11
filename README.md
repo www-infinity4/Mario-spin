@@ -2,7 +2,7 @@
 
 A Mario Bros themed slot machine game built on the ∞ Infinity System.
 
-Spin the reels featuring real Mario Bros character images — Mushroom, Super Star, Goomba, Mario, Luigi, and Coin. Every spin generates a unique scientific research token committed to the repository.
+Spin the reels featuring real Mario Bros character images — Mushroom, Super Star, Goomba, Mario, Luigi, and Coin. The game generates local research-themed spin records. Automatic repository persistence is disabled pending a protected authenticated service.
 
 ## Features
 
@@ -11,7 +11,7 @@ Spin the reels featuring real Mario Bros character images — Mushroom, Super St
 - 🔬 Auto-generated research tokens per spin (signal physics, electromagnetics, bioelectric fields, and more)
 - 🤖 AI research chat (DuckDuckGo + Archive.org)
 - 🔐 User auth with encrypted profile storage
-- 📡 GitHub Actions integration to commit spin records
+- 📡 Repository persistence pending a protected authenticated service
 - 🪪 Unique device identity per browser
 - 📦 Export spin history as HTML report
 - ₿ **BTC Harvest** — every spin generates a simulated Bitcoin transaction; you earn **8%**, the ∞ treasury earns **92%**
@@ -39,16 +39,16 @@ Each spin produces a simulated BTC transaction. Users receive **8%** and the ∞
 
 To register your Bitcoin address, sign in and use the **₿ BTC Harvest** panel. Your address is recorded in every spin token and included in the committed research file.
 
-## GitHub Actions Setup (GHP Secret)
+## Repository persistence and credential recovery
 
-The app commits a research JSON file to the `spins/` directory on every spin via the `save-spin.yml` workflow. To enable this:
+Public browser assets must never contain GitHub personal access tokens. The deployment workflow now writes an empty browser credential. Automatic browser-to-GitHub writes are unavailable until a protected authenticated service is implemented.
 
-1. **Create a GitHub Personal Access Token (PAT)** with these permissions:
-   - `Actions: Write` (to trigger `workflow_dispatch`)
-   - `Contents: Write` (used by `save-spin.yml` to commit spin files)
-2. **Add the PAT as a repository secret** named `GHP`:
-   - Go to **Settings → Secrets and variables → Actions → New repository secret**
-   - Name: `GHP`, Value: your PAT
-3. **Deploy** — the `deploy.yml` workflow injects the token into `assets/cfg.js` automatically on every push to `main`
+If an earlier deployment used GHP, revoke that personal access token in GitHub account settings. Removing the injection does not revoke a token already copied from a public deployment. Redeploy the clean configuration and verify the served assets without printing any previous credential.
 
-> ⚠️ The `GHP` token is embedded in the deployed JavaScript. Keep its scope limited to Actions Write + Contents Write only.
+## Release acceptance
+
+Mario Spin is the single active game repair. Keep other games queued until Kris requests another.
+
+Before release, verify desktop and Android reel controls, scoring, restart, history export, reload recovery, missing-network behavior, and accurate local-versus-server save status. Capture actual test and deployment receipts. Simulated BTC entries do not represent Bitcoin mining, real transfers, or withdrawable earnings.
+
+Retain the game as a preview until credential recovery, protected persistence, gameplay testing and action-card open/play/close/reopen checks pass.
