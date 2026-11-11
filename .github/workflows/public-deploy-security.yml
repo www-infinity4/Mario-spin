@@ -1,0 +1,23 @@
+name: Public deployment credential boundary
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/deploy.yml'
+      - '.github/workflows/public-deploy-security.yml'
+      - 'assets/cfg.js'
+      - 'README.md'
+      - 'test/public-deployment-security.test.cjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test test/public-deployment-security.test.cjs
